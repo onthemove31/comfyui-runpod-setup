@@ -27,9 +27,9 @@ RUN python3 -m venv .venv
 ENV PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
 
 # 4. Install Requirements
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-RUN pip install hf_transfer "huggingface_hub[hf_transfer]" comfy-cli
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir hf_transfer "huggingface_hub[hf_transfer]" comfy-cli
 
 # 5. Copy Scripts
 COPY nodes_list.txt /nodes_list.txt

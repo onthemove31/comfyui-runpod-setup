@@ -37,7 +37,7 @@ def install_nodes():
         req_path = os.path.join(repo_path, "requirements.txt")
         if os.path.exists(req_path):
             print(f"📦 Installing requirements for {repo_name}...")
-            run_command(f"pip install -r {req_path}")
+            run_command(f"pip install --no-cache-dir -r {req_path}")
         
         # Some nodes use install.py
         install_py = os.path.join(repo_path, "install.py")

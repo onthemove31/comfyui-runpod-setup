@@ -25,7 +25,8 @@ https://github.com/M1kep/ComfyLiterals
 https://github.com/r-vage/ComfyUI-RvTools_v2
 https://github.com/BadCafeCode/masquerade-nodes-comfyui
 https://github.com/Granddyser/qwen3-vl-comfy-ui
-https://github.com/wildminder/ComfyUI-DyPE.git
+https://github.com/wildminder/ComfyUI-DyPE
 https://github.com/Fannovel16/comfyui_controlnet_aux
 https://github.com/Hearmeman24/ComfyUI-LoRAPlotNode
 https://github.com/AiMiDi/ComfyUI-Aimidi-nodes
+https://github.com/Koko-boya/Comfyui-Z-Image-Utilities

@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 # Define path
-CUSTOM_NODES_DIR = "/root/ComfyUI/custom_nodes"
+CUSTOM_NODES_DIR = "/root/comfyui/ComfyUI/custom_nodes"
 
 def run_command(command):
     try:

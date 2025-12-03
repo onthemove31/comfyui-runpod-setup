@@ -1,7 +1,6 @@
-# Use Official PyTorch Image (Includes CUDA 12.4 & Python 3.11+)
+# Use Official PyTorch Image
 FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
 
-# prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 1. Install System Dependencies
@@ -10,37 +9,36 @@ RUN apt-get update && apt-get install -y \
     ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Set Up ComfyUI
-WORKDIR /root
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git .
+# 2. Set Up ComfyUI (Updated Path)
+# Create the parent directory first
+WORKDIR /root/comfyui
+# Clone ComfyUI into the nested folder
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
+
+# Move context to the actual ComfyUI application folder
+WORKDIR /root/comfyui/ComfyUI
 
 # ------------------------------------------------------------------
-# 3. VIRTUAL ENVIRONMENT SETUP (The Critical Update)
+# 3. VIRTUAL ENVIRONMENT SETUP
 # ------------------------------------------------------------------
 RUN python3 -m venv .venv
 
-# MAGIC LINE: This updates the shell path.
-# From now on, every 'python' or 'pip' command uses the venv automatically.
-ENV PATH="/root/ComfyUI/.venv/bin:$PATH"
+# MAGIC LINE: Update PATH to the new location
+ENV PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
 
-# 4. Install ComfyUI Core Requirements (Inside venv)
+# 4. Install Requirements
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
-# Install extra dependencies requested by your custom nodes
 RUN pip install hf_transfer "huggingface_hub[hf_transfer]" comfy-cli
 
-# 5. Copy Node List & Installer
+# 5. Copy Scripts
 COPY nodes_list.txt /nodes_list.txt
 COPY install_nodes.py /install_nodes.py
-
-# 6. Run the Custom Node Installer (Runs inside venv because of PATH)
-RUN python /install_nodes.py
-
-# 7. Copy Startup Script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Expose ComfyUI Port
-EXPOSE 8188
+# 6. Run the Installer
+RUN python /install_nodes.py
 
+EXPOSE 8188
 ENTRYPOINT ["/start.sh"]

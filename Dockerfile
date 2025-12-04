@@ -2,7 +2,7 @@
 # Note: If 12.8.1 fails to pull, try 12.8.0-cudnn-devel-ubuntu22.04
 FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
 
-LABEL authors="jaret"
+LABEL authors="onthemove31"
 
 # 2. Environment Variables
 ENV DEBIAN_FRONTEND=noninteractive

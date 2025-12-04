@@ -14,21 +14,6 @@ Features a **Stateless VS Code Tunnel**, allowing you to connect your local VS C
   * **Size:** Optimized to \~6-8GB (vs 15GB+ for standard PyTorch images).
   * **CI/CD:** Automatic builds via GitHub Actions (`:dev` and `:latest` tags).
 
-## Installation & Build
-
-### Option A: Use Pre-Built Image
-
-If you have already built this via GitHub Actions, your image is available at:
-`ghcr.io/<your-username>/<your-repo-name>:latest`
-
-### Option B: Build Locally
-
-```bash
-git clone https://github.com/your-username/your-repo.git
-cd your-repo
-docker build -t my-comfy-image .
-```
-
 -----
 
 ## RunPod Deployment Guide
@@ -37,7 +22,7 @@ docker build -t my-comfy-image .
 
 Create a new RunPod Template with these settings:
 
-  * **Image Name:** `ghcr.io/<your-username>/<your-repo-name>:latest`
+  * **Image Name:** `gghcr.io/onthemove31/comfyui-runpod-setup:latest`
   * **Container Disk:** `20 GB` (Minimum)
   * **Volume Mount Path:** `/workspace`
       * *Note: Do NOT mount to `/root`. Use workspace for storing images/models.*

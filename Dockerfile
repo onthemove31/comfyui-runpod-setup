@@ -51,7 +51,7 @@ RUN python3.10 -m venv .venv
 # Install Pip & PyTorch (CUDA 12.4 build works on 12.8 drivers)
 # We use --no-cache-dir everywhere to keep the layer small
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 && \
+    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130 && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir hf_transfer "huggingface_hub[hf_transfer]" comfy-cli && \
     pip cache purge

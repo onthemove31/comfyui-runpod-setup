@@ -2,7 +2,7 @@
 
 echo "🚀 Starting Custom ComfyUI Container..."
 
-# 1. Activate Virtual Environment (Updated Path)
+# 1. Activate Virtual Environment
 source /root/comfyui/ComfyUI/.venv/bin/activate
 
 # 2. Wait for Internet
@@ -20,14 +20,19 @@ echo "🔗 AUTHENTICATION REQUIRED: Check logs for code!"
 echo "----------------------------------------------------------------"
 /usr/bin/code tunnel --accept-server-license-terms --name runpod-gpu --provider microsoft &
 
-# 4. Handle ComfyUI Manager Security (Updated Path)
+# --- NEW: Sleep to let the code print cleanly ---
+echo "⏳ Waiting 10 seconds for login code to appear..."
+sleep 10
+# ------------------------------------------------
+
+# 4. Handle ComfyUI Manager Security
 MANAGER_CONFIG="/root/comfyui/ComfyUI/custom_nodes/ComfyUI-Manager/config.ini"
 if [ -f "$MANAGER_CONFIG" ]; then
     echo "🔒 Enforcing Normal Security for ComfyUI Manager..."
     sed -i 's/security_level = .*/security_level = normal/' "$MANAGER_CONFIG"
 fi
 
-# 5. Start ComfyUI (Updated Path)
+# 5. Start ComfyUI
 echo "🎨 Starting ComfyUI..."
 cd /root/comfyui/ComfyUI
 python main.py --listen 0.0.0.0 --port 8188

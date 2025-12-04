@@ -1,0 +1,14 @@
+.git
+Dockerfile
+docker-compose*.yml
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.cache
+*.log
+docs/
+tests/
+build/
+*.rst
+*.md

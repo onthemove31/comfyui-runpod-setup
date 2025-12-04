@@ -102,19 +102,3 @@ To add new nodes, update `nodes_list.txt` and push to the `main` branch. GitHub 
 To save disk space and keep models across sessions, it is recommended to store checkpoints in `/workspace` and use an `extra_model_paths.yaml` file to point ComfyUI to them.
 
 -----
-
-## Development
-
-  * **Push to `dev` branch:** Builds an image tagged `:dev` (for testing new nodes).
-  * **Push to `main` branch:** Builds an image tagged `:latest` (production).
-
-<!-- end list -->
-
-```bash
-# Test a new node safely
-git checkout -b dev
-echo "https://github.com/new/node" >> nodes_list.txt
-git commit -am "Testing new node"
-git push origin dev
-# Deploy :dev tag on RunPod to test
-```

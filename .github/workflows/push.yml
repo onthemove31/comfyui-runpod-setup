@@ -1,8 +1,8 @@
-name: Build and Publish Image
+name: Build Images
 
 on:
   push:
-    branches: ['master', 'main']
+    branches: ['main', 'dev', 'master']
   workflow_dispatch:
 
 env:
@@ -15,12 +15,22 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Job 1: Standard Fat Image
+          - dockerfile: Dockerfile
+            tag-suffix: ''      # Becomes :latest or :dev
+            
+          # Job 2: Slim Hollow Image
+          - dockerfile: Dockerfile.slim
+            tag-suffix: '-slim' # Becomes :latest-slim or :dev-slim
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- ⬇️ ADD THIS BLOCK ⬇️ ---
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -31,7 +41,6 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
-      # --- ⬆️ END OF NEW BLOCK ⬆️ ---
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -40,9 +49,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Logic: If building slim, append -slim. If main, keep as is.
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }},suffix=${{ matrix.tag-suffix }}
+            type=ref,event=branch,suffix=${{ matrix.tag-suffix }}
+            type=raw,value=cu128-nightly,enable=${{ matrix.tag-suffix == '' }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

@@ -23,14 +23,15 @@ WORKDIR /root/comfyui/ComfyUI
 RUN python3.10 -m venv .venv
 RUN . .venv/bin/activate && pip install --no-cache-dir --upgrade pip
 
-# 4. Copy Scripts (Note we copy start_slim.sh to start.sh)
-COPY nodes_list.txt /nodes_list.txt
-COPY install_nodes.py /install_nodes.py
+# 4. Copy Scripts
+# FIXED: Copy to ./ (Current Dir) instead of / (Root)
+COPY nodes_list.txt install_nodes.py ./
 COPY start_slim.sh /start.sh
 RUN chmod +x /start.sh
 
 # 5. Clone Nodes Only (Tiny Image Size)
-RUN python /install_nodes.py --clone-only
+# FIXED: Removed the leading slash so it uses the file we just copied to ./
+RUN python install_nodes.py --clone-only
 
 EXPOSE 8188
 ENTRYPOINT ["/start.sh"]

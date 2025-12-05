@@ -17,7 +17,7 @@ else
     pip install hf_transfer "huggingface_hub[hf_transfer]" comfy-cli opencv-python-headless
     
     echo "📦 Installing Custom Node Requirements..."
-    python /install_nodes.py # Runs regular install mode
+    python install_nodes.py # Runs regular install mode
     pip cache purge
 fi
 # ======================

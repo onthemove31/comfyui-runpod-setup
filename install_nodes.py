@@ -17,7 +17,7 @@ def install_nodes():
     if not os.path.exists(CUSTOM_NODES_DIR):
         os.makedirs(CUSTOM_NODES_DIR)
 
-    with open("/nodes_list.txt", "r") as f:
+    with open("nodes_list.txt", "r") as f:
         urls = [line.strip() for line in f if line.strip()]
 
     print(f"Found {len(urls)} nodes to install...")

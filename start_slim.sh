@@ -10,7 +10,7 @@ if python -c "import torch" &> /dev/null; then
     echo "✅ PyTorch already installed."
 else
     echo "⬇️  First Boot: Downloading PyTorch Nightly (cu128)..."
-    pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
     
     cd /root/comfyui/ComfyUI
     pip install -r requirements.txt

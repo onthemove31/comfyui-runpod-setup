@@ -23,7 +23,6 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
 WORKDIR /root/comfyui/ComfyUI
 
 # Create venv, install dependencies in one RUN to minimize layers
-# Note: Using cu128 nightly to match RunPod drivers while supporting RTX 5090
 RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \

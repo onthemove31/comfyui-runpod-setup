@@ -22,7 +22,7 @@ else
 fi
 # ======================
 
-# VS Code Tunnel (Same as before)
+# VS Code Tunnel
 export VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1
 curl -sL 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' --output /tmp/vscode_cli.tar.gz
 tar -xf /tmp/vscode_cli.tar.gz -C /usr/bin

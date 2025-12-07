@@ -10,35 +10,55 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /root/comfyui
 
-# Install all build deps in a single RUN + clean up
+# 1. Install Build Dependencies
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
        git curl build-essential cmake wget \
        python3.10 python3-pip python3-dev python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone repo
+# 2. Clone ComfyUI
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
 
 WORKDIR /root/comfyui/ComfyUI
 
-# Create venv, install dependencies in one RUN to minimize layers
+# 3. Create venv & Install PyTorch Nightly
 RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu128 \
+    && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
     && pip install --no-cache-dir -r requirements.txt \
                    hf_transfer "huggingface_hub[hf_transfer]" comfy-cli \
                    opencv-python-headless \
     && rm -rf /root/.cache/pip
 
-# Install custom nodes + clean caches
+# ======================================================
+# 4. INSTALL SAGEATTENTION (User Config)
+# ======================================================
+# Switch to /root so we don't install it inside ComfyUI folder
+WORKDIR /root
+
+# Clone Repo
+RUN git clone https://github.com/thu-ml/SageAttention.git
+
+WORKDIR /root/SageAttention
+
+# Compile & Install with acceleration flags
+# We use the venv python (via PATH)
+RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 && \
+    python setup.py install
+
+# Switch back to ComfyUI for the rest of the build
+WORKDIR /root/comfyui/ComfyUI
+# ======================================================
+
+# 5. Install custom nodes + clean caches
 COPY nodes_list.txt install_nodes.py ./
 RUN . .venv/bin/activate \
     && python install_nodes.py \
     && rm -rf /root/.cache/pip
 
-# Aggressive cleanup of unneeded files (tests, docs, git metadata, pycache)
+# 6. Aggressive cleanup
 RUN find .venv -type d \( -name "test*" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
     && find . -type d -name ".git" -exec rm -rf {} +
 
@@ -53,14 +73,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /root/comfyui
 
-# Added htop, nvtop, tmux back for debugging capability
+# Install Runtime Deps (added htop/nvtop/tmux back)
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
        python3.10 python3-venv ffmpeg curl git openssh-client openssl rsync unzip \
        htop nvtop tmux \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only what we need from builder
+# Copy ComfyUI (which now includes SageAttention inside site-packages)
 COPY --from=builder /root/comfyui /root/comfyui
 COPY start.sh /start.sh
 RUN chmod +x /start.sh

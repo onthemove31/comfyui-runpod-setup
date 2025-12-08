@@ -1,0 +1,83 @@
+##################################
+# Stage 1: Builder (Identical to Main)
+##################################
+FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 10.0 12.0" \
+    PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
+
+WORKDIR /root/comfyui
+
+# Install build deps
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+       git curl build-essential cmake wget \
+       python3.10 python3-pip python3-dev python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone repo
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
+
+WORKDIR /root/comfyui/ComfyUI
+
+# Create venv & Install PyTorch Nightly (cu128)
+RUN python3.10 -m venv .venv \
+    && . .venv/bin/activate \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
+    && pip install --no-cache-dir -r requirements.txt \
+                   hf_transfer "huggingface_hub[hf_transfer]" comfy-cli \
+                   opencv-python-headless \
+    && rm -rf /root/.cache/pip
+
+# Install SageAttention (Compiled)
+WORKDIR /root
+RUN git clone https://github.com/thu-ml/SageAttention.git
+WORKDIR /root/SageAttention
+RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 && \
+    . /root/comfyui/ComfyUI/.venv/bin/activate && \
+    python setup.py install
+
+WORKDIR /root/comfyui/ComfyUI
+
+# Install custom nodes
+COPY nodes_list.txt install_nodes.py ./
+RUN . .venv/bin/activate \
+    && python install_nodes.py \
+    && rm -rf /root/.cache/pip
+
+# Cleanup
+RUN find .venv -type d \( -name "test*" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
+    && find . -type d -name ".git" -exec rm -rf {} +
+
+##################################
+# Stage 2: Runtime (Local WSL Variant)
+##################################
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
+
+WORKDIR /root/comfyui
+
+# Runtime Deps
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+       python3.10 python3-venv ffmpeg curl git \
+       htop nvtop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Application from Builder
+COPY --from=builder /root/comfyui /root/comfyui
+
+# --- DIFFERENCE IS HERE ---
+# Copy the LOCAL script instead of the Tunnel script
+COPY start_local.sh /start_local.sh
+RUN chmod +x /start_local.sh
+
+WORKDIR /root/comfyui/ComfyUI
+EXPOSE 8188
+ENTRYPOINT ["/start_local.sh"]

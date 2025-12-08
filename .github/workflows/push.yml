@@ -26,6 +26,10 @@ jobs:
           # Job 2: Slim Hollow Image
           - dockerfile: Dockerfile.slim
             tag-suffix: '-slim' # Becomes :latest-slim or :dev-slim
+          
+          # Job 3: WSL Image
+          - dockerfile: Dockerfile.wsl
+            tag-suffix: '-wsl'
 
     steps:
       - name: Checkout repository

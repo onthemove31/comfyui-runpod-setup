@@ -26,8 +26,6 @@ WORKDIR /root/comfyui/ComfyUI
 RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
-    # Install Ninja (CRITICAL for compiling extensions like SageAttention)
-    && pip install --no-cache-dir ninja \
     && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
     && pip install --no-cache-dir -r requirements.txt \
                    hf_transfer "huggingface_hub[hf_transfer]" comfy-cli \
@@ -38,10 +36,8 @@ RUN python3.10 -m venv .venv \
 WORKDIR /root
 RUN git clone https://github.com/thu-ml/SageAttention.git
 WORKDIR /root/SageAttention
-
-# FIXED: Reduced MAX_JOBS from 32 to 4. 
-# 32 jobs will OOM (Out of Memory) almost any consumer PC.
-RUN export MAX_JOBS=4 NVCC_APPEND_FLAGS="--threads 4" && \
+# Lowered threads to 2 to prevent GitHub Actions OOM
+RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 2" MAX_JOBS=2 && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 
@@ -53,8 +49,8 @@ RUN . .venv/bin/activate \
     && python install_nodes.py \
     && rm -rf /root/.cache/pip
 
-# Cleanup
-RUN find .venv -depth -type d \( -name "tests" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
+# Cleanup (FIXED: Preserves docs and torch.testing)
+RUN find .venv -depth -type d \( -name "tests" -o -name "__pycache__" \) -exec rm -rf {} + \
     && find . -depth -type d -name ".git" -exec rm -rf {} + \
     || true
 
@@ -76,13 +72,16 @@ RUN apt-get update \
        htop nvtop \
     && rm -rf /var/lib/apt/lists/*
 
+# Fix Git Ownership issues for mounted volumes
+RUN git config --global --add safe.directory '*'
+
 # Copy Application from Builder
 COPY --from=builder /root/comfyui /root/comfyui
 
-# --- DIFFERENCE IS HERE ---
-# Copy the LOCAL script instead of the Tunnel script
+# Copy & FIX the startup script (CRLF Fix)
 COPY start_local.sh /start_local.sh
-RUN chmod +x /start_local.sh
+RUN sed -i 's/\r$//' /start_local.sh && \
+    chmod +x /start_local.sh
 
 WORKDIR /root/comfyui/ComfyUI
 EXPOSE 8188

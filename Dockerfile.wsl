@@ -54,7 +54,7 @@ RUN . .venv/bin/activate \
     && rm -rf /root/.cache/pip
 
 # Cleanup
-RUN find .venv -depth -type d \( -name "test*" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
+RUN find .venv -depth -type d \( -name "tests" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
     && find . -depth -type d -name ".git" -exec rm -rf {} + \
     || true
 

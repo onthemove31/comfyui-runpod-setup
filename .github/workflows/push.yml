@@ -20,12 +20,12 @@ jobs:
       matrix:
         include:
           # Job 1: Standard Fat Image
-          - dockerfile: Dockerfile
-            tag-suffix: ''      # Becomes :latest or :dev
+          #- dockerfile: Dockerfile
+          #  tag-suffix: ''      # Becomes :latest or :dev
             
           # Job 2: Slim Hollow Image
-          - dockerfile: Dockerfile.slim
-            tag-suffix: '-slim' # Becomes :latest-slim or :dev-slim
+          #- dockerfile: Dockerfile.slim
+          #  tag-suffix: '-slim' # Becomes :latest-slim or :dev-slim
           
           # Job 3: WSL Image
           - dockerfile: Dockerfile.wsl

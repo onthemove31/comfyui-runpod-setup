@@ -26,6 +26,8 @@ WORKDIR /root/comfyui/ComfyUI
 RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
+    # Install Ninja (CRITICAL for compiling extensions like SageAttention)
+    && pip install --no-cache-dir ninja \
     && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
     && pip install --no-cache-dir -r requirements.txt \
                    hf_transfer "huggingface_hub[hf_transfer]" comfy-cli \
@@ -36,7 +38,10 @@ RUN python3.10 -m venv .venv \
 WORKDIR /root
 RUN git clone https://github.com/thu-ml/SageAttention.git
 WORKDIR /root/SageAttention
-RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 && \
+
+# FIXED: Reduced MAX_JOBS from 32 to 4. 
+# 32 jobs will OOM (Out of Memory) almost any consumer PC.
+RUN export MAX_JOBS=4 NVCC_APPEND_FLAGS="--threads 4" && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 

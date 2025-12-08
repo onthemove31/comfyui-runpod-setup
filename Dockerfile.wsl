@@ -54,8 +54,9 @@ RUN . .venv/bin/activate \
     && rm -rf /root/.cache/pip
 
 # Cleanup
-RUN find .venv -type d \( -name "test*" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
-    && find . -type d -name ".git" -exec rm -rf {} +
+RUN find .venv -depth -type d \( -name "test*" -o -name "docs" -o -name "__pycache__" \) -exec rm -rf {} + \
+    && find . -depth -type d -name ".git" -exec rm -rf {} + \
+    || true
 
 ##################################
 # Stage 2: Runtime (Local WSL Variant)

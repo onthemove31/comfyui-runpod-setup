@@ -45,7 +45,7 @@ WORKDIR /root/SageAttention
 
 # Compile & Install with acceleration flags
 # We use the venv python (via PATH)
-RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 && \
+RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 4" MAX_JOBS=32 && \
     python setup.py install
 
 # Switch back to ComfyUI for the rest of the build

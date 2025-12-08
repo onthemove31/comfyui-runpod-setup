@@ -36,8 +36,8 @@ RUN python3.10 -m venv .venv \
 WORKDIR /root
 RUN git clone https://github.com/thu-ml/SageAttention.git
 WORKDIR /root/SageAttention
-# Lowered threads to 2 to prevent GitHub Actions OOM
-RUN export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 2" MAX_JOBS=2 && \
+# Lowered threads to 1 to prevent GitHub Actions OOM
+RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 1" && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 

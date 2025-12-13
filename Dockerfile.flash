@@ -17,7 +17,13 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3.10 python3-pip python3-dev python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Setup Venv & PyTorch Nightly (cu128)
+# 2. Clone ComfyUI (Moved UP to fix path issues)
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
+
+WORKDIR /root/comfyui/ComfyUI
+
+# 3. Setup Venv & PyTorch Nightly (cu128)
+# Now the venv is created at /root/comfyui/ComfyUI/.venv (Correct Path)
 RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
@@ -26,33 +32,30 @@ RUN python3.10 -m venv .venv \
     && rm -rf /root/.cache/pip
 
 # ======================================================
-# 3. COMPILE SAGE ATTENTION
+# 4. COMPILE SAGE ATTENTION
 # ======================================================
 WORKDIR /root
 RUN git clone https://github.com/thu-ml/SageAttention.git
 WORKDIR /root/SageAttention
-# Compile with low threads to save RAM on GitHub Runner
-RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 2" && \
+# MAX_JOBS=1 prevents GitHub Runner Crash
+RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 1" && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 
 # ======================================================
-# 4. COMPILE FLASH ATTENTION 2
+# 5. COMPILE FLASH ATTENTION 2
 # ======================================================
 WORKDIR /root
-# We clone a specific tag (v2.7.0 is currently stable) or main
 RUN git clone --recursive https://github.com/Dao-AILab/flash-attention.git
 WORKDIR /root/flash-attention
-# Force pre-compile for all defined architectures
-RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 2" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
+# MAX_JOBS=1 prevents GitHub Runner Crash
+RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 1" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 
 # ======================================================
-# 5. INSTALL COMFTYUI & NODES
+# 6. INSTALL NODES
 # ======================================================
-WORKDIR /root/comfyui
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
 WORKDIR /root/comfyui/ComfyUI
 
 # Install Core Requirements
@@ -60,14 +63,15 @@ RUN . .venv/bin/activate \
     && pip install --no-cache-dir -r requirements.txt \
                    hf_transfer "huggingface_hub[hf_transfer]" comfy-cli opencv-python-headless
 
-# Install Custom Nodes
+# Install Custom Nodes (Using the Special Flash List)
 COPY nodes_list_flash.txt ./nodes_list.txt
 COPY install_nodes.py ./
+
 RUN . .venv/bin/activate \
     && python install_nodes.py \
     && rm -rf /root/.cache/pip
 
-# Cleanup (Preserve docs/testing to be safe)
+# Cleanup (Preserve docs/tests to avoid crashing)
 RUN find .venv -depth -type d \( -name "tests" -o -name "__pycache__" \) -exec rm -rf {} + \
     && find . -depth -type d -name ".git" -exec rm -rf {} + \
     || true
@@ -83,7 +87,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /root/comfyui
 
-# Runtime Deps (ffmpeg, git, etc)
+# Runtime Deps
 RUN apt-get update && apt-get install --no-install-recommends -y \
     python3.10 python3-venv ffmpeg curl git openssh-client openssl rsync unzip htop nvtop tmux \
     && rm -rf /var/lib/apt/lists/*
@@ -91,7 +95,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Copy pre-compiled environment
 COPY --from=builder /root/comfyui /root/comfyui
 
-# Use standard start script (Tunneling enabled)
+# Use standard start script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 

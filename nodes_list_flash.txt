@@ -1,0 +1,3 @@
+https://github.com/1038lab/ComfyUI-QwenVL
+https://github.com/1038lab/ComfyUI-RMBG
+https://github.com/rgthree/rgthree-comfy

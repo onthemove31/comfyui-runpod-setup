@@ -31,6 +31,10 @@ jobs:
           - dockerfile: Dockerfile.wsl
             tag-suffix: '-wsl'
 
+          # Job 4: The Performance Image (Flash + Sage)
+          - dockerfile: Dockerfile.flash
+            tag-suffix: '-flash'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

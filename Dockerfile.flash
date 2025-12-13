@@ -1,0 +1,100 @@
+##################################
+# Stage 1: Builder (The Heavy Lifter)
+##################################
+FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    # Compiling for: A100 (8.0), 3090 (8.6), 4090 (8.9), H100 (9.0), Blackwell (12.0)
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" \
+    PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
+
+WORKDIR /root/comfyui
+
+# 1. Install Build Dependencies (Ninja is critical for Flash Attn)
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    git curl build-essential cmake wget \
+    python3.10 python3-pip python3-dev python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Setup Venv & PyTorch Nightly (cu128)
+RUN python3.10 -m venv .venv \
+    && . .venv/bin/activate \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir ninja packaging wheel \
+    && pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 \
+    && rm -rf /root/.cache/pip
+
+# ======================================================
+# 3. COMPILE SAGE ATTENTION
+# ======================================================
+WORKDIR /root
+RUN git clone https://github.com/thu-ml/SageAttention.git
+WORKDIR /root/SageAttention
+# Compile with low threads to save RAM on GitHub Runner
+RUN export MAX_JOBS=2 NVCC_APPEND_FLAGS="--threads 2" && \
+    . /root/comfyui/ComfyUI/.venv/bin/activate && \
+    python setup.py install
+
+# ======================================================
+# 4. COMPILE FLASH ATTENTION 2
+# ======================================================
+WORKDIR /root
+# We clone a specific tag (v2.7.0 is currently stable) or main
+RUN git clone --recursive https://github.com/Dao-AILab/flash-attention.git
+WORKDIR /root/flash-attention
+# Force pre-compile for all defined architectures
+RUN export MAX_JOBS=2 NVCC_APPEND_FLAGS="--threads 2" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
+    . /root/comfyui/ComfyUI/.venv/bin/activate && \
+    python setup.py install
+
+# ======================================================
+# 5. INSTALL COMFTYUI & NODES
+# ======================================================
+WORKDIR /root/comfyui
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
+WORKDIR /root/comfyui/ComfyUI
+
+# Install Core Requirements
+RUN . .venv/bin/activate \
+    && pip install --no-cache-dir -r requirements.txt \
+                   hf_transfer "huggingface_hub[hf_transfer]" comfy-cli opencv-python-headless
+
+# Install Custom Nodes
+COPY nodes_list_flash.txt ./nodes_list.txt
+COPY install_nodes.py ./
+RUN . .venv/bin/activate \
+    && python install_nodes.py \
+    && rm -rf /root/.cache/pip
+
+# Cleanup (Preserve docs/testing to be safe)
+RUN find .venv -depth -type d \( -name "tests" -o -name "__pycache__" \) -exec rm -rf {} + \
+    && find . -depth -type d -name ".git" -exec rm -rf {} + \
+    || true
+
+##################################
+# Stage 2: Runtime (RunPod Optimized)
+##################################
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
+
+WORKDIR /root/comfyui
+
+# Runtime Deps (ffmpeg, git, etc)
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    python3.10 python3-venv ffmpeg curl git openssh-client openssl rsync unzip htop nvtop tmux \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy pre-compiled environment
+COPY --from=builder /root/comfyui /root/comfyui
+
+# Use standard start script (Tunneling enabled)
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+WORKDIR /root/comfyui/ComfyUI
+EXPOSE 8188
+ENTRYPOINT ["/start.sh"]

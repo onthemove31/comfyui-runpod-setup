@@ -29,7 +29,7 @@ RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir ninja packaging wheel triton \
-    && pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 \
+    && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
     && rm -rf /root/.cache/pip
 
 # ======================================================
@@ -40,7 +40,7 @@ WORKDIR /root
 RUN git clone --recursive https://github.com/Dao-AILab/flash-attention.git
 WORKDIR /root/flash-attention
 # MAX_JOBS=1 is slow (30 mins) but prevents GitHub OOM crashes
-RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 1" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
+RUN export MAX_JOBS=2 NVCC_APPEND_FLAGS="--threads 2" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 
@@ -51,7 +51,7 @@ WORKDIR /root
 RUN git clone https://github.com/thu-ml/SageAttention.git
 WORKDIR /root/SageAttention
 # Now that FlashAttn is installed, this will succeed.
-RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 1" && \
+RUN export MAX_JOBS=2 NVCC_APPEND_FLAGS="--threads 2" && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 

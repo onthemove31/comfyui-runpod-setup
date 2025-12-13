@@ -28,8 +28,8 @@ jobs:
           #  tag-suffix: '-slim' # Becomes :latest-slim or :dev-slim
           
           # Job 3: WSL Image
-          - dockerfile: Dockerfile.wsl
-            tag-suffix: '-wsl'
+          # - dockerfile: Dockerfile.wsl
+          #  tag-suffix: '-wsl'
 
           # Job 4: The Performance Image (Flash + Sage)
           - dockerfile: Dockerfile.flash

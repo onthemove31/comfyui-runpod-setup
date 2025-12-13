@@ -32,7 +32,7 @@ WORKDIR /root
 RUN git clone https://github.com/thu-ml/SageAttention.git
 WORKDIR /root/SageAttention
 # Compile with low threads to save RAM on GitHub Runner
-RUN export MAX_JOBS=2 NVCC_APPEND_FLAGS="--threads 2" && \
+RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 2" && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 
@@ -44,7 +44,7 @@ WORKDIR /root
 RUN git clone --recursive https://github.com/Dao-AILab/flash-attention.git
 WORKDIR /root/flash-attention
 # Force pre-compile for all defined architectures
-RUN export MAX_JOBS=2 NVCC_APPEND_FLAGS="--threads 2" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
+RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 2" FLASH_ATTENTION_FORCE_BUILD=TRUE && \
     . /root/comfyui/ComfyUI/.venv/bin/activate && \
     python setup.py install
 

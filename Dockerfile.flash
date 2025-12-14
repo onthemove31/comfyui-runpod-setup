@@ -36,11 +36,11 @@ RUN python3.10 -m venv .venv \
 WORKDIR /root/wheels
 
 # Download SageAttention Wheel
-RUN wget -O sageattention.whl https://github.com/onthemove31/comfyui-runpod-setup/releases/download/sageattention220-linux/sageattention-2.2.0-cp312-cp312-linux_x86_64.whl
+RUN wget -O https://github.com/onthemove31/comfyui-runpod-setup/releases/download/sageattention220-linux/sageattention-2.2.0-cp312-cp312-linux_x86_64.whl
 
 # Install them! (Takes 10 seconds instead of 3 hours)
 RUN . /root/comfyui/ComfyUI/.venv/bin/activate && \
-    pip install sageattention.whl && \
+    pip install sageattention-2.2.0-cp312-cp312-linux_x86_64.whl && \
     rm *.whl
 
 # ======================================================

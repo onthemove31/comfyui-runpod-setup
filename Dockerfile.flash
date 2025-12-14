@@ -79,6 +79,21 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /root/comfyui
 
+# FIXED: Removed 'python3-distutils' (Deleted in Py3.12)
+# Replaced with 'python3-setuptools' just in case.
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    python3-venv python3-setuptools \
+    ffmpeg curl git openssh-client openssl rsync unzip htop nvtop tmux \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /root/comfyui /root/comfyui
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+WORKDIR /root/comfyui/ComfyUI
+EXPOSE 8188
+ENTRYPOINT ["/start.sh"]
+
 # Runtime Deps
 # Again, simple installation because 24.04 has Py3.12 natively
 RUN apt-get update && apt-get install --no-install-recommends -y \

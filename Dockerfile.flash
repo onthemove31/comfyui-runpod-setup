@@ -1,7 +1,8 @@
 ##################################
-# Stage 1: Builder (The Fast Installer)
+# Stage 1: Builder (Ubuntu 24.04)
 ##################################
-FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04 AS builder
+# Ubuntu 24.04 has Python 3.12 by default
+FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -9,11 +10,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /root/comfyui
 
-# 1. Install Build Dependencies
-# We still need 'devel' tools because some custom nodes might need gcc
+# 1. Install System Deps
+# Note: 'python3' on Ubuntu 24.04 IS Python 3.12.
 RUN apt-get update && apt-get install --no-install-recommends -y \
     git curl build-essential cmake wget \
-    python3.10 python3-pip python3-dev python3-venv \
+    python3-venv python3-dev python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Clone ComfyUI
@@ -21,26 +22,27 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
 
 WORKDIR /root/comfyui/ComfyUI
 
-# 3. Setup Venv & Core Libraries
-RUN python3.10 -m venv .venv \
+# 3. Setup Venv & Install Core Libraries
+# We use the system 'python3' which is 3.12
+RUN python3 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir packaging wheel ninja \
-    # Install PyTorch Nightly (Must match the version used to build wheels!)
+    && pip install --no-cache-dir packaging wheel ninja setuptools \
     && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
     && rm -rf /root/.cache/pip
 
 # ======================================================
-# 4. INJECT PRE-BUILT WHEELS (Build Wheels on RunPod/GPU Server)
+# 4. INJECT PRE-BUILT WHEELS (cp312)
 # ======================================================
 WORKDIR /root/wheels
+# Ensure these wheels were built with Python 3.12 (cp312)
 
-# Download SageAttention Wheel
+# 1. SageAttention 3 (cp312)
 RUN wget https://github.com/onthemove31/comfyui-runpod-setup/releases/download/sageattention220-linux/sageattention-2.2.0-cp312-cp312-linux_x86_64.whl
 
-# Install them! (Takes 10 seconds instead of 3 hours)
+# 2. Install
 RUN . /root/comfyui/ComfyUI/.venv/bin/activate && \
-    pip install sageattention-2.2.0-cp312-cp312-linux_x86_64.whl && \
+    pip install *.whl && \
     rm *.whl
 
 # ======================================================
@@ -53,7 +55,7 @@ RUN . .venv/bin/activate \
     && pip install --no-cache-dir -r requirements.txt \
                    hf_transfer "huggingface_hub[hf_transfer]" comfy-cli opencv-python-headless
 
-# Install Custom Nodes (using your specialized list)
+# Install Custom Nodes
 COPY nodes_list_flash.txt ./nodes_list.txt
 COPY install_nodes.py ./
 
@@ -67,9 +69,9 @@ RUN find .venv -depth -type d \( -name "tests" -o -name "__pycache__" \) -exec r
     || true
 
 ##################################
-# Stage 2: Runtime
+# Stage 2: Runtime (Ubuntu 24.04)
 ##################################
-FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -78,8 +80,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 WORKDIR /root/comfyui
 
 # Runtime Deps
+# Again, simple installation because 24.04 has Py3.12 natively
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    python3.10 python3-venv ffmpeg curl git openssh-client openssl rsync unzip htop nvtop tmux \
+    python3-venv python3-distutils \
+    ffmpeg curl git openssh-client openssl rsync unzip htop nvtop tmux \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /root/comfyui /root/comfyui

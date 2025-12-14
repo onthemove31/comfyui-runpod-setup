@@ -1,62 +1,50 @@
 ##################################
-# Stage 1: Builder (The Heavy Lifter)
+# Stage 1: Builder (The Fast Installer)
 ##################################
 FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    # Compiling for: 3090/4090 (8.6/8.9), H100 (9.0), Blackwell (12.0)
-    TORCH_CUDA_ARCH_LIST="12.0" \
     PATH="/root/comfyui/ComfyUI/.venv/bin:$PATH"
 
 WORKDIR /root/comfyui
 
 # 1. Install Build Dependencies
-# Ninja is absolutely required for Flash/Sage compilation
+# We still need 'devel' tools because some custom nodes might need gcc
 RUN apt-get update && apt-get install --no-install-recommends -y \
     git curl build-essential cmake wget \
     python3.10 python3-pip python3-dev python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Clone ComfyUI (Must happen before venv creation)
+# 2. Clone ComfyUI
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI
 
 WORKDIR /root/comfyui/ComfyUI
 
 # 3. Setup Venv & Core Libraries
-# We explicitly install TRITON here, as SageAttention needs it.
 RUN python3.10 -m venv .venv \
     && . .venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir ninja packaging wheel triton \
+    && pip install --no-cache-dir packaging wheel ninja \
+    # Install PyTorch Nightly (Must match the version used to build wheels!)
     && pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 \
     && rm -rf /root/.cache/pip
 
 # ======================================================
-# 4. COMPILE FLASH ATTENTION 2 (Dependency #1)
+# 4. INJECT PRE-BUILT WHEELS (Build Wheels on RunPod/GPU Server)
 # ======================================================
-# Must be built FIRST because SageAttention depends on it.
-WORKDIR /root
-RUN git clone --recursive https://github.com/Dao-AILab/flash-attention.git
-WORKDIR /root/flash-attention
-# MAX_JOBS=1 is slow (30 mins) but prevents GitHub OOM crashes
-RUN export MAX_JOBS=2 && \
-    . /root/comfyui/ComfyUI/.venv/bin/activate && \
-    python setup.py install
+WORKDIR /root/wheels
+
+# Download SageAttention Wheel
+RUN wget -O sageattention.whl https://github.com/onthemove31/comfyui-runpod-setup/releases/download/sageattention220-linux/sageattention-2.2.0-cp312-cp312-linux_x86_64.whl
+
+# Install them! (Takes 10 seconds instead of 3 hours)
+RUN . /root/comfyui/ComfyUI/.venv/bin/activate && \
+    pip install sageattention.whl && \
+    rm *.whl
 
 # ======================================================
-# 5. COMPILE SAGE ATTENTION (Dependency #2)
-# ======================================================
-WORKDIR /root
-RUN git clone https://github.com/thu-ml/SageAttention.git
-WORKDIR /root/SageAttention
-# Now that FlashAttn is installed, this will succeed.
-RUN export MAX_JOBS=1 NVCC_APPEND_FLAGS="--threads 1" && \
-    . /root/comfyui/ComfyUI/.venv/bin/activate && \
-    python setup.py install
-
-# ======================================================
-# 6. INSTALL CUSTOM NODES
+# 5. INSTALL CUSTOM NODES
 # ======================================================
 WORKDIR /root/comfyui/ComfyUI
 
